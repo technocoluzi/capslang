@@ -61,7 +61,6 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "startup"; Description: "Start {#AppName} when I sign in"; GroupDescription: "Additional options:"
-Name: "launch";  Description: "Start {#AppName} now";            GroupDescription: "Additional options:"
 
 [Files]
 Source: "{#BinDir}\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
@@ -75,7 +74,9 @@ Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"
 ; Order matters: register autostart before launching, so the tray menu shows
 ; the right check mark straight away.
 Filename: "{app}\{#AppExe}"; Parameters: "--autostart on"; Tasks: startup; Flags: runhidden waituntilterminated
-Filename: "{app}\{#AppExe}"; Tasks: launch; Flags: nowait postinstall skipifsilent
+; No skipifsilent: an unattended install should leave CapsLang running, which
+; is the entire point of installing it.
+Filename: "{app}\{#AppExe}"; Description: "Start {#AppName} now"; Flags: nowait postinstall
 
 [UninstallRun]
 Filename: "{app}\{#AppExe}"; Parameters: "--quit";          Flags: runhidden waituntilterminated; RunOnceId: "StopCapsLang"

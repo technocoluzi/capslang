@@ -66,7 +66,7 @@ fn main() {
 // Command line
 // ---------------------------------------------------------------------------
 
-const USAGE: &str = "CapsLang — switch keyboard input language with the Caps Lock key.
+const USAGE: &str = "CapsLang - switch keyboard input language with the Caps Lock key.
 
 USAGE:
     capslang                  Start CapsLang (or do nothing if already running)
@@ -81,11 +81,11 @@ USAGE:
 fn run_cli(args: &[String]) -> i32 {
     match args[0].as_str() {
         "--help" | "-h" | "/?" => {
-            report(USAGE);
+            report_interactive(USAGE);
             0
         }
         "--version" | "-V" => {
-            report(&format!("{APP_NAME} {VERSION}"));
+            report_interactive(&format!("{APP_NAME} {VERSION}"));
             0
         }
         "--status" => {
@@ -152,18 +152,19 @@ fn set_autostart(on: bool) -> i32 {
     }
 }
 
-/// Prints to the console we were launched from, falling back to a dialog when
-/// there is none (double-clicked from Explorer).
-fn report(text: &str) {
+/// Writes a line to the console we were launched from, if there is one.
+fn console_write(text: &str) -> bool {
     use std::io::Write;
-    let attached = unsafe { AttachConsole(ATTACH_PARENT_PROCESS) != 0 };
-    if attached {
-        if let Ok(mut out) = std::fs::OpenOptions::new().write(true).open("CONOUT$") {
-            if writeln!(out, "{text}").is_ok() {
-                return;
-            }
-        }
+    if unsafe { AttachConsole(ATTACH_PARENT_PROCESS) } == 0 {
+        return false;
     }
+    match std::fs::OpenOptions::new().write(true).open("CONOUT$") {
+        Ok(mut out) => writeln!(out, "{text}").is_ok(),
+        Err(_) => false,
+    }
+}
+
+fn alert(text: &str) {
     unsafe {
         MessageBoxW(
             std::ptr::null_mut(),
@@ -171,6 +172,21 @@ fn report(text: &str) {
             wide(APP_NAME).as_ptr(),
             MB_OK | MB_ICONINFORMATION,
         );
+    }
+}
+
+/// Status and error text, which stays silent when there is no console. The
+/// installer runs `--autostart` and `--quit` hidden and waits for them, so a
+/// modal dialog here would hang the install. Callers get the exit code.
+fn report(text: &str) {
+    console_write(text);
+}
+
+/// Output the user explicitly asked to read, so it is worth a dialog when
+/// there is no console — someone has double-clicked the exe from Explorer.
+fn report_interactive(text: &str) {
+    if !console_write(text) {
+        alert(text);
     }
 }
 
@@ -182,7 +198,7 @@ fn open_path(path: &str) {
             wide(path).as_ptr(),
             std::ptr::null(),
             std::ptr::null(),
-            SW_SHOWNORMAL as i32,
+            SW_SHOWNORMAL,
         );
     }
 }
@@ -215,13 +231,13 @@ fn run_app() {
     let hwnd = match create_window() {
         Some(h) => h,
         None => {
-            report("CapsLang could not create its message window.");
+            alert("CapsLang could not create its message window.");
             return;
         }
     };
 
     if !hook::install(hwnd) {
-        report(
+        alert(
             "CapsLang could not install its keyboard hook.\n\nAnother program may already own the Caps Lock key.",
         );
         return;

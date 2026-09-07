@@ -52,7 +52,7 @@ impl Default for Config {
 }
 
 const TEMPLATE: &str = "\
-# CapsLang configuration — https://github.com/technocoluzi/capslang
+# CapsLang configuration - https://github.com/technocoluzi/capslang
 #
 # Edit, save, then pick \"Reload config\" from the tray menu.
 

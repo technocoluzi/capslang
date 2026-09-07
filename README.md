@@ -35,8 +35,11 @@ offers to start CapsLang when you sign in.
 To install without any prompts:
 
 ```
-CapsLang-setup.exe /VERYSILENT /TASKS="startup,launch"
+CapsLang-setup.exe /VERYSILENT
 ```
+
+That installs it, registers it to start at sign-in, and launches it. Add
+`/TASKS=""` if you would rather it not start at sign-in.
 
 Or build it yourself — see [Building](#building).
 

@@ -95,16 +95,16 @@ impl Tray {
 
     /// Adds the icon, or updates it in place if it is already there.
     pub fn show(&mut self, enabled: bool, tip: &str) {
-        let mut d = self.data(enabled, tip);
+        let d = self.data(enabled, tip);
         let action = if self.added { NIM_MODIFY } else { NIM_ADD };
-        let ok = unsafe { Shell_NotifyIconW(action, &mut d) } != 0;
+        let ok = unsafe { Shell_NotifyIconW(action, &d) } != 0;
         if ok {
             self.added = true;
         } else if self.added {
             // Explorer restarted and dropped our icon; add it again.
             self.added = false;
-            let mut d = self.data(enabled, tip);
-            self.added = unsafe { Shell_NotifyIconW(NIM_ADD, &mut d) } != 0;
+            let d = self.data(enabled, tip);
+            self.added = unsafe { Shell_NotifyIconW(NIM_ADD, &d) } != 0;
         }
     }
 
@@ -114,7 +114,7 @@ impl Tray {
             d.cbSize = std::mem::size_of::<NOTIFYICONDATAW>() as u32;
             d.hWnd = self.hwnd;
             d.uID = ICON_ID;
-            unsafe { Shell_NotifyIconW(NIM_DELETE, &mut d) };
+            unsafe { Shell_NotifyIconW(NIM_DELETE, &d) };
             self.added = false;
         }
     }
