@@ -1,0 +1,47 @@
+[package]
+name = "capslang"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+description = "Switch keyboard input language with the Caps Lock key on Windows"
+authors = ["Ben <ben@technokoluzi.com>"]
+license = "MIT"
+repository = "https://github.com/technocoluzi/capslang"
+homepage = "https://github.com/technocoluzi/capslang"
+readme = "README.md"
+keywords = ["windows", "keyboard", "capslock", "language", "layout"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "capslang"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+winreg = "0.52"
+
+[dependencies.windows-sys]
+version = "0.59"
+features = [
+    "Win32_Foundation",
+    "Win32_Globalization",
+    "Win32_Graphics_Gdi",
+    "Win32_System_Console",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Registry",
+    "Win32_System_Threading",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+]
+
+[build-dependencies]
+embed-resource = "2"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build, without the leading v (e.g. 0.1.0)"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Resolve version
+        id: meta
+        shell: pwsh
+        run: |
+          $v = "${{ github.event.inputs.version }}"
+          if (-not $v) { $v = "${{ github.ref_name }}" -replace '^v', '' }
+          if (-not $v) { throw "could not determine a version" }
+
+          # The tag and Cargo.toml must agree, or users get a binary whose
+          # --version contradicts the release it came from.
+          $cargo = (Select-String -Path Cargo.toml -Pattern '^version\s*=\s*"(.+)"').Matches[0].Groups[1].Value
+          if ($cargo -ne $v) { throw "tag says $v but Cargo.toml says $cargo" }
+
+          "version=$v" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
+          Write-Host "Building CapsLang $v"
+
+      - name: Build
+        run: cargo build --release --locked
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup --no-progress -y
+          }
+          & $iscc /DAppVersion=${{ steps.meta.outputs.version }} installer\capslang.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Stage artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item target\release\capslang.exe dist\capslang.exe -Force
+          Get-ChildItem dist -Filter *.exe |
+            Get-FileHash -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path $_.Path -Leaf)" } |
+            Out-File -Encoding ascii dist\SHA256SUMS.txt
+          Get-Content dist\SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: CapsLang ${{ steps.meta.outputs.version }}
+          generate_release_notes: true
+          files: |
+            dist/CapsLang-*-setup.exe
+            dist/capslang.exe
+            dist/SHA256SUMS.txt
+          body: |
+            ## Install
+
+            Download **CapsLang-${{ steps.meta.outputs.version }}-setup.exe** and run it.
+            It installs into your user profile, so there is no administrator prompt.
+
+            Prefer no installer? **capslang.exe** is the whole program — put it
+            anywhere and run it, then `capslang --autostart on` to keep it.
+
+            CapsLang is not code-signed yet, so Windows will show
+            "Windows protected your PC". Choose *More info* → *Run anyway*.
+            Verify your download against `SHA256SUMS.txt` first if you like.
