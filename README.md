@@ -66,7 +66,7 @@ capslang --quit           Stop the running instance
 capslang --autostart on   Start CapsLang when you sign in
 capslang --autostart off  Stop starting at sign-in
 capslang --config         Open the configuration file
-capslang --status         Report whether CapsLang is running
+capslang --status         Report status and how it is configured
 capslang --version        Print the version
 capslang --help           Show this help
 ```
@@ -184,6 +184,13 @@ Remove-AppxPackage (Get-AppxPackage *CapsLang*).PackageFullName
 
 `Identity/Name` and `Identity/Publisher` in the manifest are placeholders until
 the name is reserved in Partner Center; pass the real values to the script.
+
+## Privacy
+
+CapsLang makes no network connections and records nothing. The keyboard hook
+reads each key only far enough to ask whether it is Caps Lock. See
+[PRIVACY.md](PRIVACY.md), and [src/hook.rs](src/hook.rs) if you would rather
+check than be told.
 
 ## License
 

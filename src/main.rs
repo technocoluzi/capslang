@@ -14,8 +14,10 @@ mod tray;
 
 use config::{Config, Method};
 use std::cell::RefCell;
-use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
-use windows_sys::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS};
+use windows_sys::Win32::Foundation::{HWND, INVALID_HANDLE_VALUE, LPARAM, LRESULT, WPARAM};
+use windows_sys::Win32::System::Console::{
+    AttachConsole, GetStdHandle, ATTACH_PARENT_PROCESS, STD_OUTPUT_HANDLE,
+};
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::System::Threading::CreateMutexW;
 use windows_sys::Win32::UI::Shell::ShellExecuteW;
@@ -74,7 +76,7 @@ USAGE:
     capslang --autostart on   Start CapsLang when you sign in
     capslang --autostart off  Stop starting at sign-in
     capslang --config         Open the configuration file
-    capslang --status         Report whether CapsLang is running
+    capslang --status         Report status and how it is configured
     capslang --version        Print the version
     capslang --help           Show this help";
 
@@ -90,11 +92,7 @@ fn run_cli(args: &[String]) -> i32 {
         }
         "--status" => {
             let running = find_instance().is_some();
-            report(if running {
-                "CapsLang is running."
-            } else {
-                "CapsLang is not running."
-            });
+            report(&status_report(running));
             i32::from(!running)
         }
         "--quit" => match find_instance() {
@@ -135,6 +133,29 @@ fn run_cli(args: &[String]) -> i32 {
     }
 }
 
+/// Everything worth knowing when something is not behaving, in one place, so
+/// a bug report can start with a paste rather than a conversation.
+fn status_report(running: bool) -> String {
+    let packaged = autostart::is_packaged();
+    let startup = if packaged {
+        "managed by Windows (Settings > Apps > Startup)".to_string()
+    } else if autostart::is_enabled() {
+        "on".to_string()
+    } else {
+        "off".to_string()
+    };
+    let exe = std::env::current_exe()
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|_| "(unknown)".into());
+
+    format!(
+        "CapsLang {VERSION} is {}.\n  Installed as:      {}\n  Start at sign-in:  {startup}\n  Windows shortcut:  {}\n  Executable:        {exe}",
+        if running { "running" } else { "not running" },
+        if packaged { "MSIX package" } else { "standalone" },
+        switching::detect_system_hotkey().describe(),
+    )
+}
+
 /// Shown when a packaged build is asked to change a setting Windows owns.
 const STARTUP_MANAGED: &str =
     "Windows manages this for apps installed from the Microsoft Store.\n\nOpen Settings > Apps > Startup to change it.";
@@ -160,9 +181,32 @@ fn set_autostart(on: bool) -> i32 {
     }
 }
 
-/// Writes a line to the console we were launched from, if there is one.
+/// Writes to a redirected stdout, if the parent gave us one.
+///
+/// A GUI-subsystem process has no standard handles of its own, but a parent
+/// that redirects — `capslang --status > file`, or a pipeline — passes one in.
+/// Trying this before the console is what makes the output scriptable.
+fn write_std_out(text: &str) -> bool {
+    use std::io::Write;
+    // The handle has to be checked directly. Rust reports a write to a null
+    // standard handle as a successful no-op, so that GUI programs do not fail
+    // on every print, which would silently swallow the text here and leave the
+    // console and dialog fallbacks below unreachable.
+    let handle = unsafe { GetStdHandle(STD_OUTPUT_HANDLE) };
+    if handle.is_null() || handle == INVALID_HANDLE_VALUE {
+        return false;
+    }
+    let mut out = std::io::stdout().lock();
+    writeln!(out, "{text}").and_then(|()| out.flush()).is_ok()
+}
+
+/// Writes a line wherever the caller can read it: a redirected stdout first,
+/// otherwise the console we were launched from.
 fn console_write(text: &str) -> bool {
     use std::io::Write;
+    if write_std_out(text) {
+        return true;
+    }
     if unsafe { AttachConsole(ATTACH_PARENT_PROCESS) } == 0 {
         return false;
     }
@@ -502,8 +546,16 @@ fn show_about() {
         .map(|p| p.display().to_string())
         .unwrap_or_else(|| "(unavailable)".into());
 
+    let startup = if autostart::is_packaged() {
+        "managed by Windows"
+    } else if autostart::is_enabled() {
+        "on"
+    } else {
+        "off"
+    };
+
     let text = format!(
-        "{APP_NAME} {VERSION}\n\nCaps Lock switches to the next input language.\nSwitching by: {route}\nWindows language shortcut: {}\n\nConfig: {path}\n{PROJECT_URL}",
+        "{APP_NAME} {VERSION}\n\nCaps Lock switches to the next input language.\nSwitching by: {route}\nWindows language shortcut: {}\nStart at sign-in: {startup}\n\nConfig: {path}\n{PROJECT_URL}",
         hotkey.describe()
     );
     unsafe {

@@ -11,6 +11,16 @@ All notable changes to CapsLang are recorded here. The format follows
 - MSIX packaging for the Microsoft Store: manifest, generated logo assets,
   and a build script, wired into CI so a broken manifest fails there rather
   than at submission.
+- `--status` now reports how CapsLang was installed, whether it starts at
+  sign-in, and which shortcut it sends, so a bug report can start with a paste.
+- A privacy policy and the Microsoft Store listing copy.
+
+### Fixed
+
+- Command output goes to a redirected stdout when the caller provides one, so
+  `capslang --status > file` and pipelines work. Rust reports a write to a
+  null standard handle as a silent success, so the handle is now checked
+  directly rather than trusting the write.
 
 ### Changed
 
