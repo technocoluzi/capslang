@@ -14,10 +14,13 @@
     process.
 
   * windows.startupTask. A packaged app cannot start itself at sign-in through
-    the Run key -- writes there are virtualised into the package's own hive --
-    so the platform wants this instead. Enabled="true" starts CapsLang on
-    first sign-in after install; from then on the user owns the setting in
-    Settings > Apps > Startup.
+    the Run key, because writes there are virtualised into the package's own
+    hive, so the platform wants this instead. Enabled="true" starts CapsLang
+    on first sign-in after install; from then on the user owns the setting in
+    Settings, Apps, Startup.
+
+  (Note for editors: XML comments cannot contain a double hyphen, so this
+  file avoids them entirely.)
 -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"

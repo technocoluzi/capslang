@@ -61,6 +61,15 @@ try {
         Replace("__VERSION__", $Version) |
         Set-Content (Join-Path $layout "AppxManifest.xml") -Encoding utf8
 
+    # Catch a malformed manifest here rather than in makeappx, or worse at
+    # submission. XML comments cannot contain a double hyphen, which is very
+    # easy to write by accident.
+    try {
+        [xml](Get-Content (Join-Path $layout "AppxManifest.xml") -Raw) | Out-Null
+    } catch {
+        throw "AppxManifest.xml is not well-formed XML: $($_.Exception.Message)"
+    }
+
     Write-Host "Staged layout: $layout"
 
     $makeappx = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter makeappx.exe -ErrorAction SilentlyContinue |
