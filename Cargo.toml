@@ -2,7 +2,7 @@
 name = "capslang"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.82"
 description = "Switch keyboard input language with the Caps Lock key on Windows"
 authors = ["Ben <ben@technokoluzi.com>"]
 license = "MIT"
@@ -28,6 +28,7 @@ features = [
     "Win32_Globalization",
     "Win32_Graphics_Gdi",
     "Win32_Security",
+    "Win32_Storage_Packaging_Appx",
     "Win32_System_Console",
     "Win32_System_LibraryLoader",
     "Win32_System_Registry",

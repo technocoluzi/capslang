@@ -55,6 +55,19 @@ jobs:
           & $iscc /DAppVersion=${{ steps.meta.outputs.version }} installer\capslang.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # Unsigned, because the Store signs submissions itself. It goes out as a
+      # workflow artifact rather than a release asset: nobody can install an
+      # unsigned .msix, so publishing one would only mislead.
+      - name: Build MSIX for Store submission
+        shell: pwsh
+        run: ./packaging/build-msix.ps1 -Version "${{ steps.meta.outputs.version }}.0"
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: capslang-msix-${{ steps.meta.outputs.version }}
+          path: dist/*.msix
+          if-no-files-found: error
+
       - name: Stage artifacts
         shell: pwsh
         run: |

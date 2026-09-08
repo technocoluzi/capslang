@@ -44,10 +44,18 @@ jobs:
           & $iscc /Qp /DAppVersion=0.0.0 installer\capslang.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # The Store package is the other shippable artifact, and makeappx is
+      # already on the runner, so a broken manifest surfaces here rather than
+      # at submission time.
+      - name: Build MSIX
+        shell: pwsh
+        run: ./packaging/build-msix.ps1 -Version 0.0.0.0
+
       - uses: actions/upload-artifact@v5
         with:
           name: capslang-dev-build
           path: |
             target/release/capslang.exe
             dist/*.exe
+            dist/*.msix
           if-no-files-found: error

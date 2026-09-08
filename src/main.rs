@@ -135,9 +135,13 @@ fn run_cli(args: &[String]) -> i32 {
     }
 }
 
+/// Shown when a packaged build is asked to change a setting Windows owns.
+const STARTUP_MANAGED: &str =
+    "Windows manages this for apps installed from the Microsoft Store.\n\nOpen Settings > Apps > Startup to change it.";
+
 fn set_autostart(on: bool) -> i32 {
     match autostart::set(on) {
-        Ok(()) => {
+        autostart::Outcome::Changed => {
             report(if on {
                 "CapsLang will start when you sign in."
             } else {
@@ -145,7 +149,11 @@ fn set_autostart(on: bool) -> i32 {
             });
             0
         }
-        Err(e) => {
+        autostart::Outcome::ManagedByWindows => {
+            report(STARTUP_MANAGED);
+            1
+        }
+        autostart::Outcome::Failed(e) => {
             report(&format!("Could not change the startup setting: {e}"));
             1
         }
@@ -386,12 +394,23 @@ unsafe fn show_menu(hwnd: HWND) {
         ID_ENABLED,
         wide("&Enabled").as_ptr(),
     );
-    AppendMenuW(
-        menu,
-        checked(autostart::is_enabled()),
-        ID_AUTOSTART,
-        wide("Start with &Windows").as_ptr(),
-    );
+    if autostart::is_packaged() {
+        // A checkbox here would be a lie: Windows can overrule it, and this
+        // build cannot read back what Windows decided.
+        AppendMenuW(
+            menu,
+            MF_STRING,
+            ID_AUTOSTART,
+            wide("&Startup settings...").as_ptr(),
+        );
+    } else {
+        AppendMenuW(
+            menu,
+            checked(autostart::is_enabled()),
+            ID_AUTOSTART,
+            wide("Start with &Windows").as_ptr(),
+        );
+    }
     AppendMenuW(menu, MF_SEPARATOR, 0, std::ptr::null());
     AppendMenuW(
         menu,
@@ -425,7 +444,17 @@ unsafe fn show_menu(hwnd: HWND) {
     match choice as usize {
         ID_ENABLED => toggle_enabled(),
         ID_AUTOSTART => {
-            let _ = autostart::set(!autostart::is_enabled());
+            if autostart::is_packaged() {
+                open_path(autostart::SETTINGS_URI);
+            } else {
+                match autostart::set(!autostart::is_enabled()) {
+                    autostart::Outcome::Changed => {}
+                    autostart::Outcome::ManagedByWindows => alert(STARTUP_MANAGED),
+                    autostart::Outcome::Failed(e) => {
+                        alert(&format!("Could not change the startup setting.\n\n{e}"))
+                    }
+                }
+            }
         }
         ID_OPEN_CONFIG => {
             if let Some(p) = config::path() {

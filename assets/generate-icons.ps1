@@ -106,3 +106,39 @@ $on.Dispose()
 $off = New-Master '#9CA3AF' '#6B7280'
 Save-Ico $off (Join-Path $OutDir 'capslang-off.ico')
 $off.Dispose()
+
+# ---------------------------------------------------------------------------
+# MSIX assets. The Store package needs PNG logos at fixed sizes; they are the
+# same artwork, centred on a transparent canvas so the manifest's
+# BackgroundColor shows through.
+# ---------------------------------------------------------------------------
+
+function Save-Png {
+    param([System.Drawing.Bitmap]$Master, [int]$W, [int]$H, [string]$Path)
+    $b = New-Object System.Drawing.Bitmap $W, $H
+    $g = [System.Drawing.Graphics]::FromImage($b)
+    $g.InterpolationMode = 'HighQualityBicubic'
+    $g.PixelOffsetMode = 'HighQuality'
+    $g.SmoothingMode = 'AntiAlias'
+    $g.Clear([System.Drawing.Color]::Transparent)
+    $side = [Math]::Min($W, $H)
+    $g.DrawImage($Master, (New-Object System.Drawing.Rectangle ([int](($W - $side) / 2)), ([int](($H - $side) / 2)), $side, $side))
+    $g.Dispose()
+    $dir = Split-Path -Parent $Path
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Force $dir | Out-Null }
+    $b.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
+    $b.Dispose()
+    Write-Host "wrote $Path"
+}
+
+$assets = Join-Path (Split-Path -Parent $OutDir) 'packaging\msix\Assets'
+$m = New-Master '#3B82F6' '#6366F1'
+Save-Png $m 50  50  (Join-Path $assets 'StoreLogo.png')
+Save-Png $m 44  44  (Join-Path $assets 'Square44x44Logo.png')
+Save-Png $m 71  71  (Join-Path $assets 'Square71x71Logo.png')
+Save-Png $m 150 150 (Join-Path $assets 'Square150x150Logo.png')
+Save-Png $m 310 310 (Join-Path $assets 'Square310x310Logo.png')
+Save-Png $m 310 150 (Join-Path $assets 'Wide310x150Logo.png')
+# Unplated variant is what Windows shows on the taskbar and in Alt+Tab.
+Save-Png $m 24  24  (Join-Path $assets 'Square44x44Logo.targetsize-24_altform-unplated.png')
+$m.Dispose()

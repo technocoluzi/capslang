@@ -53,6 +53,11 @@ Or build it yourself — see [Building](#building).
 Right-click the tray icon to pause CapsLang, toggle start-at-login, open the
 config file, or quit. Double-clicking the icon pauses and resumes.
 
+Installed from the Microsoft Store, start-at-login belongs to Windows rather
+than to CapsLang — the menu opens *Settings → Apps → Startup* instead of
+carrying its own checkbox, and `--autostart` reports that and does nothing.
+A packaged app cannot honestly own that switch: Windows can overrule it.
+
 There is also a command line, useful for scripts and for the installer:
 
 ```
@@ -157,6 +162,28 @@ ISCC.exe /DAppVersion=0.1.0 installer/capslang.iss
 
 The icons are generated from code, so they can be reviewed rather than taken on
 trust. Regenerate them with `powershell -File assets/generate-icons.ps1`.
+
+### The Store package
+
+```
+powershell -File packaging/build-msix.ps1 -Version 0.1.0.0
+```
+
+That stages `dist/msix-layout` and, with the Windows SDK installed, packs
+`dist/CapsLang-<version>.msix`. The package is deliberately left unsigned: the
+Store signs submissions with a Microsoft-trusted certificate, which is the
+point of shipping there — it is what clears SmartScreen and Smart App Control.
+
+To run the package locally without signing anything, turn on Developer Mode
+(*Settings → System → For developers*) and register the layout in place:
+
+```
+Add-AppxPackage -Register dist\msix-layout\AppxManifest.xml
+Remove-AppxPackage (Get-AppxPackage *CapsLang*).PackageFullName
+```
+
+`Identity/Name` and `Identity/Publisher` in the manifest are placeholders until
+the name is reserved in Partner Center; pass the real values to the script.
 
 ## License
 

@@ -6,6 +6,19 @@ All notable changes to CapsLang are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- MSIX packaging for the Microsoft Store: manifest, generated logo assets,
+  and a build script, wired into CI so a broken manifest fails there rather
+  than at submission.
+
+### Changed
+
+- Start-at-login now depends on how CapsLang was installed. Unpackaged, the
+  Run key, as before. Packaged, Windows owns the setting through the manifest
+  startup task, so the tray menu opens Settings > Apps > Startup instead of
+  showing a checkbox it cannot honestly keep in sync.
+
 ## [0.1.0]
 
 First release.
