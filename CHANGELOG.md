@@ -14,6 +14,9 @@ All notable changes to CapsLang are recorded here. The format follows
 - `--status` now reports how CapsLang was installed, whether it starts at
   sign-in, and which shortcut it sends, so a bug report can start with a paste.
 - A privacy policy and the Microsoft Store listing copy.
+- CI registers the MSIX and exercises the packaged build: that it knows it is
+  packaged, defers start-at-login to Windows, declines `--autostart`, starts,
+  stays up, and still answers `--quit`.
 
 ### Fixed
 

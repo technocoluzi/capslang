@@ -185,6 +185,11 @@ Remove-AppxPackage (Get-AppxPackage *CapsLang*).PackageFullName
 `Identity/Name` and `Identity/Publisher` in the manifest are placeholders until
 the name is reserved in Partner Center; pass the real values to the script.
 
+CI registers that package on every push and checks the paths that only exist
+inside one (`packaging/test-msix.ps1`). Do not run that script on your own
+machine: it turns Developer Mode on and leaves it on, which is fine for a
+runner that is thrown away afterwards and rude to a desktop.
+
 ## Privacy
 
 CapsLang makes no network connections and records nothing. The keyboard hook
