@@ -51,6 +51,13 @@ jobs:
         shell: pwsh
         run: ./packaging/build-msix.ps1 -Version 0.0.0.0
 
+      # The packaged code paths are unreachable without a registered package,
+      # and registering an unsigned one needs Developer Mode. Doing it here
+      # keeps that toggle on a throwaway machine instead of a developer's.
+      - name: Test the packaged build
+        shell: pwsh
+        run: ./packaging/test-msix.ps1
+
       - uses: actions/upload-artifact@v5
         with:
           name: capslang-dev-build
