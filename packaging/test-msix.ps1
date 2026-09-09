@@ -94,6 +94,28 @@ try {
     Write-Host "  said: $auto"
     Check "declines to manage startup itself" $true ($auto -match "Windows manages this")
 
+    # The checks above prove the app reasons correctly about being packaged.
+    # This one proves it survives being packaged at all: the hook installs, the
+    # window comes up, and nothing in the app model kills it on the way.
+    Write-Host "== The packaged app starts, and stays up =="
+    Get-Process capslang -ErrorAction SilentlyContinue | Stop-Process -Force
+    Start-Sleep -Milliseconds 500
+    Invoke-CommandInDesktopPackage -PackageFamilyName $pkg.PackageFamilyName `
+        -AppId "CapsLang" -Command $exe
+    Start-Sleep -Seconds 6
+    $live = Get-Process capslang -ErrorAction SilentlyContinue
+    Check "still running after six seconds" $true ($null -ne $live)
+
+    if ($live) {
+        # --quit finds the window by class, which crosses the package boundary,
+        # so the ordinary command still governs a Store install.
+        & (Join-Path $root $UnpackagedExe) --quit | Out-Null
+        Start-Sleep -Seconds 3
+        Check "--quit stops it from outside the package" $true `
+            ($null -eq (Get-Process capslang -ErrorAction SilentlyContinue))
+        Get-Process capslang -ErrorAction SilentlyContinue | Stop-Process -Force
+    }
+
     Write-Host "== The unpackaged build is unaffected =="
     if (Test-Path (Join-Path $root $UnpackagedExe)) {
         $out3 = Join-Path $env:RUNNER_TEMP "capslang-standalone-status.txt"
